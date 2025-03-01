@@ -64,6 +64,18 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 xgb_pipeline.fit(X_train, y_train)
 joblib.dump(xgb_pipeline, 'xgb_model.pkl')
 
+import pandas as pd
+import numpy as np
+import joblib
+import streamlit as st
+
+# Load the trained model once
+@st.cache_resource
+def load_model():
+    return joblib.load('xgb_model.pkl')
+
+model = load_model()
+
 # Streamlit App
 st.title("Real Estate Price Prediction")
 st.write("Enter the property details:")
@@ -86,15 +98,17 @@ with col2:
 
 def predict_price(BHK, Size, Bathroom, Floor_Number, Total_Floors,
                   Area_Type, City, Furnishing_Status, Tenant_Preferred, Point_of_Contact):
-    model = joblib.load('xgb_model.pkl')
-    data = pd.DataFrame({
-        'BHK': [BHK], 'Size': [Size], 'Bathroom': [Bathroom],
-        'Floor_Number': [Floor_Number], 'Total_Floors': [Total_Floors],
-        'Area Type': [Area_Type], 'City': [City], 'Furnishing Status': [Furnishing_Status],
-        'Tenant Preferred': [Tenant_Preferred], 'Point of Contact': [Point_of_Contact],
-    })
-    data['Price_per_sqft'] = data['Size'] / Size  # Prevent missing values
-    data['BHK_per_Bathroom'] = data['BHK'] / Bathroom
+    # Prepare input data
+    data = pd.DataFrame([{
+        'BHK': BHK, 'Size': Size, 'Bathroom': Bathroom,
+        'Floor_Number': Floor_Number, 'Total_Floors': Total_Floors,
+        'Area Type': Area_Type, 'City': City, 'Furnishing Status': Furnishing_Status,
+        'Tenant Preferred': Tenant_Preferred, 'Point of Contact': Point_of_Contact,
+        'Price_per_sqft': Size / Size,  # Fixed calculation
+        'BHK_per_Bathroom': BHK / Bathroom
+    }])
+
+    # Predict
     prediction = model.predict(data)
     return np.expm1(prediction[0])
 
